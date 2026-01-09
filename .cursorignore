@@ -1,0 +1,38 @@
+# Cursor IDE - Exclude from indexing and search
+
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Build outputs
+.next/
+out/
+build/
+dist/
+
+# Data directories
+data/
+
+# Docker
+.docker/
+
+# Coverage
+coverage/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS files
+.DS_Store
+
+# Go binary outputs
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
