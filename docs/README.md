@@ -1,4 +1,4 @@
-# Playables Admin - Developer Guide
+# Playables Client - Developer Guide
 
 Internal platform for Interactive Ads / UA analytics system.
 
@@ -14,7 +14,7 @@ make build
 ```
 
 ### 2. Access
-- **Admin UI**: http://localhost:3000
+- **Client UI**: http://localhost:3000
 - **API**: http://localhost:8080
 - **NATS Monitor**: http://localhost:8222
 
@@ -29,7 +29,7 @@ docker-compose down -v    # Stop + remove data
 ## Project Structure
 
 ```
-playables-admin/
+playables-client/
 ├── apps/
 │   ├── api/                      # Go Backend
 │   │   ├── main.go               # Entry point
@@ -41,7 +41,7 @@ playables-admin/
 │   │       ├── transport/        # HTTP handlers
 │   │       └── worker/           # Async event processing
 │   │
-│   └── admin/                    # Next.js Frontend
+│   └── client/                   # Next.js Frontend
 │       └── src/
 │           ├── app/              # Pages (playables, analytics, experiments)
 │           ├── components/       # React components
@@ -61,7 +61,7 @@ playables-admin/
        │ HTTP
        ▼
 ┌─────────────────┐        ┌──────────────┐
-│  Next.js Admin  │◄──────►│   Go API     │
+│  Next.js Client │◄──────►│   Go API     │
 │   (Port 3000)   │  REST  │ (Port 8080)  │
 └─────────────────┘        └───┬──────┬───┘
                                │      │
@@ -162,7 +162,7 @@ go run main.go
 # Terminal 1: Ensure API is running
 
 # Terminal 2: Run Next.js
-cd apps/admin
+cd apps/client
 npm install
 npm run dev
 ```
@@ -194,14 +194,14 @@ make up             # Start services
 make down           # Stop services
 make logs           # View all logs
 make logs-api       # View API logs
-make logs-admin     # View admin logs
+make logs-client    # View client logs
 make clean          # Remove everything
 make reset          # Clean + rebuild
 make status         # Service status
 
 # Local dev
 make dev-api        # Run API locally
-make dev-admin      # Run admin locally
+make dev-client     # Run client locally
 ```
 
 ---
@@ -272,9 +272,6 @@ docker-compose restart mysql clickhouse
 ```bash
 # Check API health
 curl http://localhost:8080/health
-
-# Verify env var
-echo $NEXT_PUBLIC_API_URL
 ```
 
 ---

@@ -4,13 +4,13 @@ Internal platform for Interactive Ads / UA analytics system.
 
 ## Overview
 
-This is an admin panel and backend API for managing playable ads and analyzing their performance metrics. It demonstrates:
+This is a client application and backend API for managing playable ads and analyzing their performance metrics. It demonstrates:
 - Full-stack development (Go backend + Next.js frontend)
 - Clean architecture patterns
 - Async event processing
-- Data-heavy admin UI
+- Data-heavy client UI
 
-**This is NOT a playable ad - it's the platform that manages them.**
+**It's the platform that manages playables.**
 
 ## Tech Stack
 
@@ -25,10 +25,10 @@ This is an admin panel and backend API for managing playable ads and analyzing t
 
 ### Frontend
 - **Framework**: Next.js 14 (App Router)
-- **Language**: TypeScript + React
+- **Language**: TypeScript
 - **Data Fetching**: React Query
 - **Charts**: Recharts
-- **Style**: Simple CSS (focus on clarity, not polish)
+- **Style**: Simple CSS
 
 ## Architecture
 
@@ -45,7 +45,7 @@ apps/
 │   │   └── worker/      # Async event processing
 │   └── scripts/         # Database init scripts
 │
-└── admin/        # Next.js frontend
+└── client/       # Next.js frontend
     └── src/
         ├── app/         # Pages (playables, analytics, experiments)
         ├── components/  # Reusable components
@@ -89,15 +89,20 @@ Query parameters: `start_date`, `end_date` (format: YYYY-MM-DD)
 - Go 1.21+ (for local development)
 - Node.js 18+ (for local development)
 
-### Running with Docker
+### Quick Start (Production Mode)
 
-1. **Start all services:**
-   ```bash
-   docker-compose up --build
-   ```
+Run everything in Docker:
 
-2. **Access the applications:**
-   - Admin UI: http://localhost:3000
+```bash
+# Start all services
+docker-compose up --build
+
+# Or using Makefile
+make build
+```
+
+**Access:**
+- Client UI: http://localhost:3000
    - API: http://localhost:8080
    - NATS Monitoring: http://localhost:8222
 
@@ -106,7 +111,65 @@ Query parameters: `start_date`, `end_date` (format: YYYY-MM-DD)
    docker-compose down
    ```
 
-### Local Development
+### Local Development (Recommended)
+
+**Best approach**: Run backend in Docker, frontend locally with hot reload.
+
+#### 1️⃣ Start Backend Services (in Docker)
+
+```bash
+# Option A: Using Makefile (recommended)
+make dev
+
+# Option B: Using docker-compose directly
+docker-compose -f docker-compose.dev.yml up --build
+```
+
+This starts:
+- ✅ MySQL (port 3306)
+- ✅ ClickHouse (port 9000)
+- ✅ NATS (port 4222)
+- ✅ API (port 8080)
+
+#### 2️⃣ Run Frontend (with hot reload)
+
+In a **separate terminal**:
+
+```bash
+cd apps/client
+npm install  # first time only
+npm run dev
+```
+
+**Access:**
+- 🎨 Frontend: http://localhost:3000 (hot reload enabled!)
+- 🚀 API: http://localhost:8080
+
+#### 🔄 Making Changes
+
+- **Frontend changes**: Saved automatically, hot reload in browser
+- **Backend changes**: Requires rebuild:
+  ```bash
+  make dev  # or docker-compose -f docker-compose.dev.yml up --build
+  ```
+
+#### 🛑 Stop Services
+
+```bash
+# Stop backend
+make dev-down
+
+# Or
+docker-compose -f docker-compose.dev.yml down
+
+# Frontend stops with Ctrl+C
+```
+
+---
+
+### Alternative: Fully Local Development
+
+If you want to run everything outside Docker:
 
 #### Backend (API)
 ```bash
@@ -120,20 +183,18 @@ export MYSQL_DSN="root:password@tcp(localhost:3306)/playables?parseTime=true"
 export CLICKHOUSE_DSN="clickhouse://localhost:9000/analytics"
 export NATS_URL="nats://localhost:4222"
 
-# Run
+# Run (requires databases running)
 go run main.go
 ```
 
-#### Frontend (Admin)
+#### Frontend (Client)
 ```bash
-cd apps/admin
-
-# Install dependencies
+cd apps/client
 npm install
-
-# Run dev server
 npm run dev
 ```
+
+**Note**: You still need MySQL, ClickHouse, and NATS running (can use docker-compose for just databases).
 
 ## Sample Data
 
@@ -169,7 +230,7 @@ The system includes sample data:
 ### Frontend Choices
 
 **Why Next.js?**
-- Fast setup for admin panels
+- Fast setup for client applications
 - Server Components for data-heavy pages
 - Built-in routing
 
@@ -211,7 +272,7 @@ go test ./...
 
 ### Frontend
 ```bash
-cd apps/admin
+cd apps/client
 npm test
 ```
 

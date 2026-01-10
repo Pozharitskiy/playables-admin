@@ -4,7 +4,7 @@ import { Providers } from './providers'
 import { Navigation } from '@/components/Navigation'
 
 export const metadata: Metadata = {
-  title: 'Playables Admin',
+  title: 'Playables Analytics',
   description: 'Internal platform for Interactive Ads analytics',
 }
 

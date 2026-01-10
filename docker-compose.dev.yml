@@ -1,3 +1,6 @@
+# Development mode: only backend services
+# Client (frontend) should be run separately with: npm run dev
+
 services:
   mysql:
     image: mysql:8.0
@@ -65,19 +68,6 @@ services:
         condition: service_healthy
       nats:
         condition: service_healthy
-    restart: unless-stopped
-
-  client:
-    build:
-      context: ./apps/client
-      dockerfile: Dockerfile
-    container_name: playables-client
-    ports:
-      - "3000:3000"
-    environment:
-      NEXT_PUBLIC_API_URL: "http://localhost:8080"
-    depends_on:
-      - api
     restart: unless-stopped
 
 volumes:

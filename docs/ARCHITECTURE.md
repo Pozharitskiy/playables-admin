@@ -9,7 +9,7 @@
        │ HTTP
        ▼
 ┌─────────────────┐        ┌──────────────┐
-│  Next.js Admin  │◄──────►│   Go API     │
+│  Next.js Client │◄──────►│   Go API     │
 │   (Port 3000)   │  REST  │ (Port 8080)  │
 └─────────────────┘        └───┬──────┬───┘
                                │      │
@@ -42,7 +42,7 @@
 ## Project Structure
 
 ```
-playables-admin/
+playables-client/
 ├── apps/
 │   ├── api/                          # Go Backend
 │   │   ├── main.go                   # Entry point
@@ -68,7 +68,7 @@ playables-admin/
 │   │   ├── go.mod
 │   │   └── Dockerfile
 │   │
-│   └── admin/                        # Next.js Frontend
+│   └── client/                       # Next.js Frontend
 │       ├── src/
 │       │   ├── app/                  # Pages (App Router)
 │       │   │   ├── layout.tsx        # Root layout
