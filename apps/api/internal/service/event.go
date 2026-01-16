@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"log"
 	"playables-api/internal/domain"
 	"time"
 
@@ -49,6 +50,16 @@ func (s *EventService) TrackEvent(ctx context.Context, event *domain.Event) erro
 		event.Timestamp = time.Now()
 	}
 
+	log.Printf("EventService: Publishing event to NATS - ID=%s, Type=%s, PlayableID=%d", 
+		event.ID, event.Type, event.PlayableID)
+
 	// Publish to NATS for async processing
-	return s.publisher.PublishEvent(event)
+	err = s.publisher.PublishEvent(event)
+	if err != nil {
+		log.Printf("EventService: Failed to publish event to NATS: %v", err)
+		return err
+	}
+
+	log.Printf("EventService: Successfully published event to NATS - ID=%s", event.ID)
+	return nil
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"log"
 	"playables-api/internal/domain"
 	"time"
 
@@ -32,23 +33,21 @@ func (r *ClickHouseRepository) Close() error {
 }
 
 func (r *ClickHouseRepository) InsertEvents(ctx context.Context, events []domain.Event) error {
-	tx, err := r.db.BeginTx(ctx, nil)
-	if err != nil {
-		return err
+	if len(events) == 0 {
+		return nil
 	}
-	defer tx.Rollback()
 
-	stmt, err := tx.PrepareContext(ctx, `
-		INSERT INTO events (id, playable_id, experiment_id, type, timestamp, metadata)
-		VALUES (?, ?, ?, ?, ?, ?)
-	`)
-	if err != nil {
-		return err
-	}
-	defer stmt.Close()
+	// ClickHouse bulk insert using VALUES with multiple rows
+	// Build the query with placeholders for all events
+	query := "INSERT INTO events (id, playable_id, experiment_id, type, timestamp, metadata) VALUES "
+	args := make([]interface{}, 0, len(events)*6)
 
-	for _, event := range events {
-		_, err := stmt.ExecContext(ctx,
+	for i, event := range events {
+		if i > 0 {
+			query += ", "
+		}
+		query += "(?, ?, ?, ?, ?, ?)"
+		args = append(args,
 			event.ID,
 			event.PlayableID,
 			event.ExperimentID,
@@ -56,12 +55,16 @@ func (r *ClickHouseRepository) InsertEvents(ctx context.Context, events []domain
 			event.Timestamp,
 			string(event.Metadata),
 		)
-		if err != nil {
-			return err
-		}
 	}
 
-	return tx.Commit()
+	// Execute bulk insert
+	_, err := r.db.ExecContext(ctx, query, args...)
+	if err != nil {
+		return fmt.Errorf("failed to insert events: %w", err)
+	}
+
+	log.Printf("Successfully inserted %d events to ClickHouse", len(events))
+	return nil
 }
 
 func (r *ClickHouseRepository) GetSummary(ctx context.Context, startDate, endDate time.Time) (*domain.AnalyticsSummary, error) {

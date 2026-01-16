@@ -130,15 +130,20 @@ func (h *HTTPHandler) CreatePlayable(w http.ResponseWriter, r *http.Request) {
 func (h *HTTPHandler) TrackEvent(w http.ResponseWriter, r *http.Request) {
 	var event domain.Event
 	if err := json.NewDecoder(r.Body).Decode(&event); err != nil {
+		log.Printf("TrackEvent: Failed to decode request body: %v", err)
 		respondError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
+	log.Printf("TrackEvent: Received event - Type=%s, PlayableID=%d", event.Type, event.PlayableID)
+
 	if err := h.eventService.TrackEvent(r.Context(), &event); err != nil {
+		log.Printf("TrackEvent: Failed to track event: %v", err)
 		respondError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
+	log.Printf("TrackEvent: Event accepted - Type=%s, PlayableID=%d", event.Type, event.PlayableID)
 	respondJSON(w, http.StatusAccepted, map[string]string{"status": "accepted"})
 }
 
@@ -185,13 +190,15 @@ func parseDateRange(r *http.Request) (time.Time, time.Time) {
 
 	if start := r.URL.Query().Get("start_date"); start != "" {
 		if t, err := time.Parse("2006-01-02", start); err == nil {
-			startDate = t
+			// Set to start of day (00:00:00)
+			startDate = time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location())
 		}
 	}
 
 	if end := r.URL.Query().Get("end_date"); end != "" {
 		if t, err := time.Parse("2006-01-02", end); err == nil {
-			endDate = t
+			// Set to end of day (23:59:59.999999999) to include all events on that day
+			endDate = time.Date(t.Year(), t.Month(), t.Day(), 23, 59, 59, 999999999, t.Location())
 		}
 	}
 
@@ -223,7 +230,7 @@ func (h *HTTPHandler) GetTimeSeriesAllPlayables(w http.ResponseWriter, r *http.R
 func (h *HTTPHandler) GetTimeSeriesByPlayable(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	playableIDStr := vars["playable_id"]
-	
+
 	playableID, err := strconv.ParseInt(playableIDStr, 10, 64)
 	if err != nil {
 		respondError(w, http.StatusBadRequest, "invalid playable_id")

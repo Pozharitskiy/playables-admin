@@ -45,9 +45,14 @@ func (w *EventWorker) Start() {
 	}()
 
 	err := w.subscriber.SubscribeEvents(func(event *domain.Event) error {
+		log.Printf("Received event: type=%s, playable_id=%d, timestamp=%v", 
+			event.Type, event.PlayableID, event.Timestamp)
+		
 		w.buffer = append(w.buffer, *event)
+		log.Printf("Buffer size: %d/%d", len(w.buffer), w.bufferSize)
 
 		if len(w.buffer) >= w.bufferSize {
+			log.Println("Buffer full, flushing immediately")
 			w.flush()
 		}
 
@@ -56,6 +61,8 @@ func (w *EventWorker) Start() {
 
 	if err != nil {
 		log.Printf("Failed to subscribe to events: %v", err)
+	} else {
+		log.Println("Successfully subscribed to NATS events")
 	}
 }
 
@@ -67,12 +74,17 @@ func (w *EventWorker) flush() {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	log.Printf("Flushing %d events to ClickHouse", len(w.buffer))
+	eventsToFlush := make([]domain.Event, len(w.buffer))
+	copy(eventsToFlush, w.buffer)
+	
+	log.Printf("Flushing %d events to ClickHouse", len(eventsToFlush))
 
-	if err := w.repository.InsertEvents(ctx, w.buffer); err != nil {
+	if err := w.repository.InsertEvents(ctx, eventsToFlush); err != nil {
 		log.Printf("Failed to insert events: %v", err)
+		// Don't clear buffer on error - will retry on next flush
 		return
 	}
 
+	// Buffer cleared successfully (logging is done in repository)
 	w.buffer = make([]domain.Event, 0)
 }

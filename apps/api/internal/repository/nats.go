@@ -2,6 +2,7 @@ package repository
 
 import (
 	"encoding/json"
+	"log"
 	"playables-api/internal/domain"
 
 	"github.com/nats-io/nats.go"
@@ -32,19 +33,48 @@ func (c *NATSClient) Close() error {
 func (c *NATSClient) PublishEvent(event *domain.Event) error {
 	data, err := json.Marshal(event)
 	if err != nil {
+		log.Printf("NATS: Failed to marshal event: %v", err)
 		return err
 	}
 
-	return c.conn.Publish(EventsSubject, data)
+	log.Printf("NATS: Publishing event to subject '%s' - ID=%s, Type=%s, PlayableID=%d", 
+		EventsSubject, event.ID, event.Type, event.PlayableID)
+
+	err = c.conn.Publish(EventsSubject, data)
+	if err != nil {
+		log.Printf("NATS: Failed to publish event: %v", err)
+		return err
+	}
+
+	log.Printf("NATS: Successfully published event - ID=%s", event.ID)
+	return nil
 }
 
 func (c *NATSClient) SubscribeEvents(handler func(*domain.Event) error) error {
-	_, err := c.conn.Subscribe(EventsSubject, func(msg *nats.Msg) {
+	log.Printf("NATS: Subscribing to subject '%s'", EventsSubject)
+	
+	sub, err := c.conn.Subscribe(EventsSubject, func(msg *nats.Msg) {
+		log.Printf("NATS: Received message on subject '%s', size=%d bytes", EventsSubject, len(msg.Data))
+		
 		var event domain.Event
 		if err := json.Unmarshal(msg.Data, &event); err != nil {
+			log.Printf("NATS: Failed to unmarshal event: %v", err)
 			return
 		}
-		handler(&event)
+		
+		log.Printf("NATS: Unmarshaled event - ID=%s, Type=%s, PlayableID=%d", 
+			event.ID, event.Type, event.PlayableID)
+		
+		if err := handler(&event); err != nil {
+			log.Printf("NATS: Handler returned error: %v", err)
+		}
 	})
-	return err
+	
+	if err != nil {
+		log.Printf("NATS: Failed to subscribe: %v", err)
+		return err
+	}
+	
+	log.Printf("NATS: Successfully subscribed to '%s', subscription=%v", EventsSubject, sub)
+	return nil
 }
