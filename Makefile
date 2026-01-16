@@ -1,9 +1,9 @@
-.PHONY: help up down logs build clean reset dev dev-backend dev-frontend dev-client
+.PHONY: help up down build dev dev-down logs logs-api clean reset status
 
-help: 
+help: ## Show this help message
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-15s\033[0m %s\n", $$1, $$2}'
 
-# Production mode (all in Docker)
+# Production mode
 up: ## Start all services
 	docker-compose up -d
 
@@ -13,8 +13,8 @@ build: ## Build and start all services
 down: ## Stop all services
 	docker-compose down
 
-# Development mode (backend in Docker, frontend local)
-dev: ## Start backend in Docker (use with npm run dev for frontend)
+# Development mode
+dev: ## Start backend services in Docker
 	docker-compose -f docker-compose.dev.yml up --build -d
 	@echo ""
 	@echo "✅ Backend services started!"
@@ -23,42 +23,25 @@ dev: ## Start backend in Docker (use with npm run dev for frontend)
 	@echo "📦 NATS:       localhost:4222"
 	@echo "🚀 API:        localhost:8080"
 	@echo ""
-	@echo "💡 Now run client:"
-	@echo "   cd apps/client && npm run dev"
+	@echo "💡 Now run client: cd apps/client && npm run dev"
 	@echo ""
-
-dev-backend: ## Same as dev (start backend services only)
-	@make dev
-
-dev-frontend: ## Run frontend with hot reload
-	cd apps/client && npm run dev
 
 dev-down: ## Stop development services
 	docker-compose -f docker-compose.dev.yml down
 
+# Logs
 logs: ## Show logs for all services
-	docker-compose logs -f
+	docker-compose -f docker-compose.dev.yml logs -f
 
 logs-api: ## Show API logs
-	docker-compose logs -f api
+	docker-compose -f docker-compose.dev.yml logs -f api
 
-logs-client: ## Show client logs
-	docker-compose logs -f client
-
+# Maintenance
 clean: ## Remove containers and volumes
-	docker-compose down -v
+	docker-compose -f docker-compose.dev.yml down -v
 
-reset: clean build ## Reset everything and rebuild
-	@echo "Environment reset complete"
-
-dev-api: ## Run API locally
-	cd apps/api && go run main.go
-
-dev-client: ## Run client locally
-	cd apps/client && npm run dev
-
-test-api: ## Run API tests
-	cd apps/api && go test ./...
+reset: clean dev ## Reset everything and rebuild
+	@echo "✅ Environment reset complete"
 
 status: ## Show service status
-	docker-compose ps
+	docker-compose -f docker-compose.dev.yml ps
