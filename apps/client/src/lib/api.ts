@@ -12,7 +12,6 @@ export interface Playable {
 export interface Event {
   id?: string;
   playable_id: number;
-  experiment_id?: number;
   type: 'impression' | 'click' | 'install';
   timestamp?: string;
   metadata?: any;
@@ -32,11 +31,6 @@ export interface PlayableAnalytics {
   summary: AnalyticsSummary;
 }
 
-export interface ExperimentAnalytics {
-  experiment_id: number;
-  experiment_name: string;
-  summary: AnalyticsSummary;
-}
 
 export interface TimeSeriesData {
   date: string;
@@ -89,6 +83,12 @@ class APIClient {
     });
   }
 
+  async deletePlayable(id: number): Promise<{ status: string }> {
+    return this.request<{ status: string }>(`/playables/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
   // Events
   async trackEvent(event: Event): Promise<{ status: string }> {
     return this.request<{ status: string }>('/events', {
@@ -112,14 +112,6 @@ class APIClient {
     if (endDate) params.append('end_date', endDate);
     
     return this.request<PlayableAnalytics[]>(`/analytics/by-playable?${params}`);
-  }
-
-  async getAnalyticsByExperiment(startDate?: string, endDate?: string): Promise<ExperimentAnalytics[]> {
-    const params = new URLSearchParams();
-    if (startDate) params.append('start_date', startDate);
-    if (endDate) params.append('end_date', endDate);
-    
-    return this.request<ExperimentAnalytics[]>(`/analytics/by-experiment?${params}`);
   }
 
   async getTimeSeriesAllPlayables(startDate?: string, endDate?: string): Promise<PlayableTimeSeriesAnalytics[]> {

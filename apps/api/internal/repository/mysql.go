@@ -78,24 +78,42 @@ func (r *MySQLRepository) GetPlayableByID(ctx context.Context, id int64) (*domai
 	return &p, nil
 }
 
-// Experiment methods
-func (r *MySQLRepository) GetExperiments(ctx context.Context) ([]domain.Experiment, error) {
-	query := `SELECT id, name, description, status, created_at, updated_at FROM experiments ORDER BY created_at DESC`
-	rows, err := r.db.QueryContext(ctx, query)
+func (r *MySQLRepository) DeletePlayable(ctx context.Context, id int64) error {
+	query := `DELETE FROM playables WHERE id = ?`
+	result, err := r.db.ExecContext(ctx, query, id)
 	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var experiments []domain.Experiment
-	for rows.Next() {
-		var e domain.Experiment
-		err := rows.Scan(&e.ID, &e.Name, &e.Description, &e.Status, &e.CreatedAt, &e.UpdatedAt)
-		if err != nil {
-			return nil, err
-		}
-		experiments = append(experiments, e)
+		return err
 	}
 
-	return experiments, rows.Err()
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if rowsAffected == 0 {
+		return sql.ErrNoRows
+	}
+
+	// Reset AUTO_INCREMENT to MAX(id) + 1 to avoid gaps
+	var maxID sql.NullInt64
+	maxIDQuery := `SELECT MAX(id) FROM playables`
+	err = r.db.QueryRowContext(ctx, maxIDQuery).Scan(&maxID)
+	if err != nil {
+		// If query fails, continue anyway - not critical
+		return nil
+	}
+
+	var nextID int64 = 1
+	if maxID.Valid {
+		nextID = maxID.Int64 + 1
+	}
+
+	resetQuery := `ALTER TABLE playables AUTO_INCREMENT = ?`
+	_, err = r.db.ExecContext(ctx, resetQuery, nextID)
+	if err != nil {
+		// If reset fails, log but don't fail the delete operation
+		// This is not critical for the delete operation itself
+	}
+
+	return nil
 }

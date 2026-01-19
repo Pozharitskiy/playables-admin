@@ -50,7 +50,7 @@ func (r *ClickHouseRepository) InsertEvents(ctx context.Context, events []domain
 		args = append(args,
 			event.ID,
 			event.PlayableID,
-			event.ExperimentID,
+			nil, // experiment_id is always NULL now
 			event.Type,
 			event.Timestamp,
 			string(event.Metadata),
@@ -142,59 +142,6 @@ func (r *ClickHouseRepository) GetAnalyticsByPlayable(ctx context.Context, start
 		results = append(results, domain.PlayableAnalytics{
 			PlayableID:   playableID,
 			PlayableName: fmt.Sprintf("Playable %d", playableID),
-			Summary: domain.AnalyticsSummary{
-				TotalImpressions: impressions,
-				TotalClicks:      clicks,
-				TotalInstalls:    installs,
-				CTR:              ctr,
-				IPM:              ipm,
-			},
-		})
-	}
-
-	return results, rows.Err()
-}
-
-func (r *ClickHouseRepository) GetAnalyticsByExperiment(ctx context.Context, startDate, endDate time.Time) ([]domain.ExperimentAnalytics, error) {
-	query := `
-		SELECT 
-			experiment_id,
-			countIf(type = 'impression') as impressions,
-			countIf(type = 'click') as clicks,
-			countIf(type = 'install') as installs
-		FROM events
-		WHERE timestamp >= ? AND timestamp <= ? AND experiment_id IS NOT NULL
-		GROUP BY experiment_id
-		ORDER BY impressions DESC
-	`
-
-	rows, err := r.db.QueryContext(ctx, query, startDate, endDate)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var results []domain.ExperimentAnalytics
-	for rows.Next() {
-		var experimentID, impressions, clicks, installs int64
-		err := rows.Scan(&experimentID, &impressions, &clicks, &installs)
-		if err != nil {
-			return nil, err
-		}
-
-		ctr := 0.0
-		if impressions > 0 {
-			ctr = float64(clicks) / float64(impressions) * 100
-		}
-
-		ipm := 0.0
-		if impressions > 0 {
-			ipm = float64(installs) / float64(impressions) * 1000
-		}
-
-		results = append(results, domain.ExperimentAnalytics{
-			ExperimentID:   experimentID,
-			ExperimentName: fmt.Sprintf("Experiment %d", experimentID),
 			Summary: domain.AnalyticsSummary{
 				TotalImpressions: impressions,
 				TotalClicks:      clicks,
@@ -320,4 +267,14 @@ func (r *ClickHouseRepository) GetTimeSeriesAllPlayables(ctx context.Context, st
 	}
 
 	return results, rows.Err()
+}
+
+func (r *ClickHouseRepository) DeleteEventsByPlayableID(ctx context.Context, playableID int64) error {
+	query := `ALTER TABLE events DELETE WHERE playable_id = ?`
+	_, err := r.db.ExecContext(ctx, query, playableID)
+	if err != nil {
+		return fmt.Errorf("failed to delete events for playable %d: %w", playableID, err)
+	}
+	log.Printf("Successfully deleted events for playable %d from ClickHouse", playableID)
+	return nil
 }

@@ -22,6 +22,7 @@ type PlayableService interface {
 	CreatePlayable(ctx context.Context, playable *domain.Playable) error
 	ListPlayables(ctx context.Context) ([]domain.Playable, error)
 	GetPlayable(ctx context.Context, id int64) (*domain.Playable, error)
+	DeletePlayable(ctx context.Context, id int64) error
 }
 
 type EventService interface {
@@ -31,7 +32,6 @@ type EventService interface {
 type AnalyticsService interface {
 	GetSummary(ctx context.Context, startDate, endDate time.Time) (*domain.AnalyticsSummary, error)
 	GetAnalyticsByPlayable(ctx context.Context, startDate, endDate time.Time) ([]domain.PlayableAnalytics, error)
-	GetAnalyticsByExperiment(ctx context.Context, startDate, endDate time.Time) ([]domain.ExperimentAnalytics, error)
 	GetTimeSeriesByPlayable(ctx context.Context, playableID int64, startDate, endDate time.Time) ([]domain.TimeSeriesData, error)
 	GetTimeSeriesAllPlayables(ctx context.Context, startDate, endDate time.Time) ([]domain.PlayableTimeSeriesAnalytics, error)
 }
@@ -61,6 +61,7 @@ func NewRouter(h *HTTPHandler) *mux.Router {
 	// Playables
 	r.HandleFunc("/playables", h.ListPlayables).Methods("GET", "OPTIONS")
 	r.HandleFunc("/playables", h.CreatePlayable).Methods("POST", "OPTIONS")
+	r.HandleFunc("/playables/{id}", h.DeletePlayable).Methods("DELETE", "OPTIONS")
 
 	// Events
 	r.HandleFunc("/events", h.TrackEvent).Methods("POST", "OPTIONS")
@@ -68,7 +69,6 @@ func NewRouter(h *HTTPHandler) *mux.Router {
 	// Analytics
 	r.HandleFunc("/analytics/summary", h.GetAnalyticsSummary).Methods("GET", "OPTIONS")
 	r.HandleFunc("/analytics/by-playable", h.GetAnalyticsByPlayable).Methods("GET", "OPTIONS")
-	r.HandleFunc("/analytics/by-experiment", h.GetAnalyticsByExperiment).Methods("GET", "OPTIONS")
 	r.HandleFunc("/analytics/timeseries", h.GetTimeSeriesAllPlayables).Methods("GET", "OPTIONS")
 	r.HandleFunc("/analytics/timeseries/{playable_id}", h.GetTimeSeriesByPlayable).Methods("GET", "OPTIONS")
 
@@ -127,6 +127,28 @@ func (h *HTTPHandler) CreatePlayable(w http.ResponseWriter, r *http.Request) {
 	respondJSON(w, http.StatusCreated, playable)
 }
 
+func (h *HTTPHandler) DeletePlayable(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	idStr := vars["id"]
+
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		respondError(w, http.StatusBadRequest, "invalid playable id")
+		return
+	}
+
+	if err := h.playableService.DeletePlayable(r.Context(), id); err != nil {
+		if err.Error() == "playable not found" {
+			respondError(w, http.StatusNotFound, err.Error())
+			return
+		}
+		respondError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	respondJSON(w, http.StatusOK, map[string]string{"status": "deleted"})
+}
+
 func (h *HTTPHandler) TrackEvent(w http.ResponseWriter, r *http.Request) {
 	var event domain.Event
 	if err := json.NewDecoder(r.Body).Decode(&event); err != nil {
@@ -163,18 +185,6 @@ func (h *HTTPHandler) GetAnalyticsByPlayable(w http.ResponseWriter, r *http.Requ
 	startDate, endDate := parseDateRange(r)
 
 	analytics, err := h.analyticsService.GetAnalyticsByPlayable(r.Context(), startDate, endDate)
-	if err != nil {
-		respondError(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-
-	respondJSON(w, http.StatusOK, analytics)
-}
-
-func (h *HTTPHandler) GetAnalyticsByExperiment(w http.ResponseWriter, r *http.Request) {
-	startDate, endDate := parseDateRange(r)
-
-	analytics, err := h.analyticsService.GetAnalyticsByExperiment(r.Context(), startDate, endDate)
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, err.Error())
 		return

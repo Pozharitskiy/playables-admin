@@ -25,10 +25,11 @@ services:
     volumes:
       - clickhouse_data:/var/lib/clickhouse
       - ./apps/api/scripts/init-clickhouse.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./apps/api/scripts/clickhouse-config/users.d:/etc/clickhouse-server/users.d
     environment:
       CLICKHOUSE_DB: analytics
     healthcheck:
-      test: ["CMD", "clickhouse-client", "--query", "SELECT 1"]
+      test: ["CMD", "clickhouse-client", "--user", "default", "--password", "clickhouse", "--query", "SELECT 1"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -56,7 +57,7 @@ services:
     environment:
       SERVER_ADDR: ":8080"
       MYSQL_DSN: "root:password@tcp(mysql:3306)/playables?parseTime=true"
-      CLICKHOUSE_DSN: "clickhouse://clickhouse:9000/analytics"
+      CLICKHOUSE_DSN: "clickhouse://default:clickhouse@clickhouse:9000/analytics"
       NATS_URL: "nats://nats:4222"
     depends_on:
       mysql:

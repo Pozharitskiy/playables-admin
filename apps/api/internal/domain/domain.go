@@ -17,22 +17,11 @@ type Playable struct {
 
 // Event represents a tracking event
 type Event struct {
-	ID           string          `json:"id"`
-	PlayableID   int64           `json:"playable_id"`
-	ExperimentID *int64          `json:"experiment_id,omitempty"`
-	Type         string          `json:"type"` // impression, click, install
-	Timestamp    time.Time       `json:"timestamp"`
-	Metadata     json.RawMessage `json:"metadata,omitempty"`
-}
-
-// Experiment represents an A/B test
-type Experiment struct {
-	ID          int64     `json:"id"`
-	Name        string    `json:"name"`
-	Description string    `json:"description"`
-	Status      string    `json:"status"`
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
+	ID         string          `json:"id"`
+	PlayableID int64           `json:"playable_id"`
+	Type       string          `json:"type"` // impression, click, install
+	Timestamp  time.Time       `json:"timestamp"`
+	Metadata   json.RawMessage `json:"metadata,omitempty"`
 }
 
 // AnalyticsSummary represents aggregated metrics
@@ -49,13 +38,6 @@ type PlayableAnalytics struct {
 	PlayableID  int64            `json:"playable_id"`
 	PlayableName string          `json:"playable_name"`
 	Summary     AnalyticsSummary `json:"summary"`
-}
-
-// ExperimentAnalytics represents analytics for a specific experiment
-type ExperimentAnalytics struct {
-	ExperimentID   int64            `json:"experiment_id"`
-	ExperimentName string           `json:"experiment_name"`
-	Summary        AnalyticsSummary `json:"summary"`
 }
 
 // TimeSeriesData represents analytics data over time

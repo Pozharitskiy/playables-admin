@@ -9,7 +9,6 @@ import (
 type AnalyticsRepository interface {
 	GetSummary(ctx context.Context, startDate, endDate time.Time) (*domain.AnalyticsSummary, error)
 	GetAnalyticsByPlayable(ctx context.Context, startDate, endDate time.Time) ([]domain.PlayableAnalytics, error)
-	GetAnalyticsByExperiment(ctx context.Context, startDate, endDate time.Time) ([]domain.ExperimentAnalytics, error)
 	GetTimeSeriesByPlayable(ctx context.Context, playableID int64, startDate, endDate time.Time) ([]domain.TimeSeriesData, error)
 	GetTimeSeriesAllPlayables(ctx context.Context, startDate, endDate time.Time) ([]domain.PlayableTimeSeriesAnalytics, error)
 }
@@ -36,19 +35,19 @@ func (s *AnalyticsService) GetAnalyticsByPlayable(ctx context.Context, startDate
 		return nil, err
 	}
 
-	// Enrich with playable names
-	for i := range analytics {
-		playable, err := s.playableRepo.GetPlayableByID(ctx, analytics[i].PlayableID)
+	// Filter and enrich with playable names - only include existing playables
+	var filteredAnalytics []domain.PlayableAnalytics
+	for _, item := range analytics {
+		playable, err := s.playableRepo.GetPlayableByID(ctx, item.PlayableID)
 		if err == nil {
-			analytics[i].PlayableName = playable.Name
+			// Only include if playable exists
+			item.PlayableName = playable.Name
+			filteredAnalytics = append(filteredAnalytics, item)
 		}
+		// Skip deleted playables
 	}
 
-	return analytics, nil
-}
-
-func (s *AnalyticsService) GetAnalyticsByExperiment(ctx context.Context, startDate, endDate time.Time) ([]domain.ExperimentAnalytics, error) {
-	return s.repo.GetAnalyticsByExperiment(ctx, startDate, endDate)
+	return filteredAnalytics, nil
 }
 
 func (s *AnalyticsService) GetTimeSeriesByPlayable(ctx context.Context, playableID int64, startDate, endDate time.Time) ([]domain.TimeSeriesData, error) {
@@ -61,13 +60,17 @@ func (s *AnalyticsService) GetTimeSeriesAllPlayables(ctx context.Context, startD
 		return nil, err
 	}
 
-	// Enrich with playable names
-	for i := range analytics {
-		playable, err := s.playableRepo.GetPlayableByID(ctx, analytics[i].PlayableID)
+	// Filter and enrich with playable names - only include existing playables
+	var filteredAnalytics []domain.PlayableTimeSeriesAnalytics
+	for _, item := range analytics {
+		playable, err := s.playableRepo.GetPlayableByID(ctx, item.PlayableID)
 		if err == nil {
-			analytics[i].PlayableName = playable.Name
+			// Only include if playable exists
+			item.PlayableName = playable.Name
+			filteredAnalytics = append(filteredAnalytics, item)
 		}
+		// Skip deleted playables
 	}
 
-	return analytics, nil
+	return filteredAnalytics, nil
 }

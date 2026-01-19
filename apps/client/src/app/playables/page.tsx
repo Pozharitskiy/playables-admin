@@ -1,18 +1,20 @@
 'use client'
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { apiClient } from '@/lib/api'
+import { apiClient, Playable } from '@/lib/api'
 import { useState } from 'react'
 
 export default function PlayablesPage() {
-  const queryClient = useQueryClient()
   const [showForm, setShowForm] = useState(false)
+  const [enabledPolling, setEnabledPolling] = useState(true)
   const [formData, setFormData] = useState({
     name: '',
     description: '',
     status: 'draft',
   })
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null)
+
+  const queryClient = useQueryClient()
 
   const showNotification = (message: string, type: 'success' | 'error') => {
     setNotification({ message, type })
@@ -37,6 +39,7 @@ export default function PlayablesPage() {
       )
     },
     refetchInterval: 5000,
+    enabled: enabledPolling,
   })
 
   const getPlayableAnalytics = (playableId: number) => {
@@ -50,7 +53,7 @@ export default function PlayablesPage() {
   }
 
   const createMutation = useMutation({
-    mutationFn: apiClient.createPlayable,
+    mutationFn: (playable: Omit<Playable, 'id' | 'created_at' | 'updated_at'>) => apiClient.createPlayable(playable),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['playables'] })
       queryClient.invalidateQueries({ queryKey: ['playables-analytics'] })
@@ -59,6 +62,7 @@ export default function PlayablesPage() {
       showNotification('Playable created successfully!', 'success')
     },
     onError: (error) => {
+      console.log(error)
       console.error('Failed to create playable:', error)
       showNotification(`Failed to create playable: ${error.message}`, 'error')
     },
@@ -81,6 +85,19 @@ export default function PlayablesPage() {
     },
   })
 
+  const deleteMutation = useMutation({
+    mutationFn: (id: number) => apiClient.deletePlayable(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['playables'] })
+      queryClient.invalidateQueries({ queryKey: ['playables-analytics'] })
+      showNotification('Playable deleted successfully!', 'success')
+    },
+    onError: (error) => {
+      console.error('Failed to delete playable:', error)
+      showNotification(`Failed to delete playable: ${error.message}`, 'error')
+    },
+  })
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     createMutation.mutate(formData)
@@ -88,6 +105,12 @@ export default function PlayablesPage() {
 
   const handleTrackEvent = (playableId: number, eventType: string) => {
     trackEventMutation.mutate({ playableId, eventType })
+  }
+
+  const handleDelete = (id: number) => {
+    if (window.confirm('Are you sure you want to delete this playable?')) {
+      deleteMutation.mutate(id)
+    }
   }
 
   if (error) {
@@ -138,12 +161,20 @@ export default function PlayablesPage() {
             Manage your interactive ad creatives
           </p>
         </div>
-        <button
-          className="btn btn-primary"
-          onClick={() => setShowForm(!showForm)}
-        >
-          {showForm ? 'Cancel' : 'New Playable'}
-        </button>
+        <div style={{ display: 'flex', gap: '8px', flexDirection: 'column' }}>
+          <button
+            className="btn btn-primary"
+            onClick={() => setShowForm(!showForm)}
+            >
+            {showForm ? 'Cancel' : 'New Playable'}
+          </button>
+          <button
+            className={`btn btn-primary ${enabledPolling ? 'btn-secondary' : 'btn-primary'}`}
+            onClick={() => setEnabledPolling(!enabledPolling)}
+            >
+            {enabledPolling ? 'Disable Polling' : 'Enable Polling'}
+          </button>
+        </div>
       </div>
 
       {!showForm && (
@@ -268,7 +299,7 @@ export default function PlayablesPage() {
                         <div style={{ display: 'flex', gap: '6px', justifyContent: 'center', flexWrap: 'wrap' }}>
                           <button
                             onClick={() => handleTrackEvent(playable.id, 'impression')}
-                            disabled={trackEventMutation.isPending}
+                            disabled={trackEventMutation.isPending || deleteMutation.isPending}
                             className="btn btn-secondary"
                             style={{ padding: '4px 8px', fontSize: '12px' }}
                           >
@@ -276,7 +307,7 @@ export default function PlayablesPage() {
                           </button>
                           <button
                             onClick={() => handleTrackEvent(playable.id, 'click')}
-                            disabled={trackEventMutation.isPending}
+                            disabled={trackEventMutation.isPending || deleteMutation.isPending}
                             className="btn btn-secondary"
                             style={{ padding: '4px 8px', fontSize: '12px' }}
                           >
@@ -284,11 +315,25 @@ export default function PlayablesPage() {
                           </button>
                           <button
                             onClick={() => handleTrackEvent(playable.id, 'install')}
-                            disabled={trackEventMutation.isPending}
+                            disabled={trackEventMutation.isPending || deleteMutation.isPending}
                             className="btn btn-secondary"
                             style={{ padding: '4px 8px', fontSize: '12px' }}
                           >
                             Install
+                          </button>
+                          <button
+                            onClick={() => handleDelete(playable.id)}
+                            disabled={deleteMutation.isPending || trackEventMutation.isPending}
+                            className="btn"
+                            style={{ 
+                              padding: '4px 8px', 
+                              fontSize: '12px',
+                              background: '#ef4444',
+                              color: 'white',
+                              border: 'none'
+                            }}
+                          >
+                            Delete
                           </button>
                         </div>
                       </td>

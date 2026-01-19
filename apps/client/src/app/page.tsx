@@ -60,25 +60,6 @@ export default function Home() {
             </p>
           </div>
         </Link>
-
-        <Link href="/experiments">
-          <div className="card" style={{
-            cursor: 'pointer',
-            height: '100%'
-          }}>
-            <h2 style={{
-              fontSize: '18px',
-              fontWeight: '600',
-              marginBottom: '8px',
-              color: '#171717'
-            }}>
-              Experiments
-            </h2>
-            <p style={{ color: '#737373', lineHeight: '1.6', fontSize: '14px' }}>
-              A/B tests and experiment results for optimization
-            </p>
-          </div>
-        </Link>
       </div>
     </div>
   )

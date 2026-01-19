@@ -40,7 +40,7 @@ func main() {
 	defer natsClient.Close()
 
 	// Initialize services
-	playableService := service.NewPlayableService(mysqlRepo)
+	playableService := service.NewPlayableService(mysqlRepo, clickhouseRepo)
 	eventService := service.NewEventService(natsClient, mysqlRepo)
 	analyticsService := service.NewAnalyticsService(clickhouseRepo, mysqlRepo)
 
